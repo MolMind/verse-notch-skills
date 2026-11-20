@@ -39,3 +39,15 @@ python3 "$skill_dir/scripts/vnplugin.py" validate "$demo_dir/aurora.vnplugin"
 ```
 
 打开兼容的 VerseNotch，在「插件库 → 从文件导入」选择生成的包，预览后应用。发布自己的样式时，按 [歌词样式文档](https://versenotch.com/docs/plugins/lyric-style) 检查兼容性和投稿要求。
+
+## 生成测试市场安装包
+
+开发与测试环境开放预览类型时，可用 Python 3.10 或以上版本生成测试包。预览包用于验证投稿、审核和安装登记，安装后仅可查看配置。
+
+```sh
+demo_dir=$(mktemp -d)
+python3 scripts/pack-preview.py window-style "$demo_dir/window.vnplugin" \
+  --id app.example.window-preview --name "浮窗示例" --author Example --license UNLICENSED
+```
+
+命令支持五种预览类型。默认使用对应示例配置，可用 `--config` 指定其他 JSON 配置。投稿时按清单填写相同的类型、ID、名称、版本和许可证。服务器和客户端分别校验契约。
