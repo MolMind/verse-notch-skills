@@ -1,0 +1,197 @@
+"""Validate and pack VerseNotch lyric-style v1 without extracting ZIP input."""
+
+import argparse
+import json
+from pathlib import Path
+import re
+import stat
+import sys
+import zipfile
+
+
+MAX_ARCHIVE = 10 * 1024**2
+MAX_TOTAL = 30 * 1024**2
+MAX_FILES = 100
+RULES = Path(__file__).resolve().parents[1] / "references"
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def safe_name(name):
+    require(len(name) <= 180 and all(re.fullmatch(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*", part)
+                                     for part in name.split("/")), f"Invalid path: {name!r}")
+
+
+def check_entries(entries):
+    require(len(entries) <= MAX_FILES, "Too many files (maximum 100)")
+    require(sum(length for _, length in entries) <= MAX_TOTAL, "Contents exceed 30 MiB")
+    names = set()
+    for name, _ in entries:
+        safe_name(name)
+        require(name.lower() not in names, f"Duplicate path: {name}")
+        names.add(name.lower())
+
+
+def read_files(path):
+    require(not path.is_symlink(), "Symbolic links are not allowed")
+    if path.is_dir():
+        files = []
+        for item in path.rglob("*"):
+            mode = item.lstat().st_mode
+            if stat.S_ISDIR(mode):
+                continue
+            require(stat.S_ISREG(mode), f"Not a regular file: {item}")
+            files.append((item.relative_to(path).as_posix(), item))
+            require(len(files) <= MAX_FILES, "Too many files (maximum 100)")
+        check_entries([(name, item.stat().st_size) for name, item in files])
+        return {name: item.read_bytes() for name, item in files}
+    require(path.suffix == ".vnplugin", "Use a source directory or a .vnplugin file")
+    require(path.stat().st_size <= MAX_ARCHIVE, "Archive exceeds 10 MiB")
+    with zipfile.ZipFile(path) as archive:
+        entries = archive.infolist()
+        for item in entries:
+            mode = stat.S_IFMT(item.external_attr >> 16)
+            require(not item.is_dir() and mode in (0, stat.S_IFREG), f"Not a regular file: {item.filename}")
+            require(item.orig_filename == item.filename and not (item.flag_bits & 1), "Invalid ZIP filename or encrypted entry")
+            require(item.compress_type in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED), "Unsupported ZIP compression")
+        check_entries([(item.filename, item.file_size) for item in entries])
+        return {item.filename: archive.read(item) for item in entries}
+
+
+def unique_pairs(pairs):
+    result = {}
+    for key, value in pairs:
+        require(key not in result, f"Duplicate JSON key: {key}")
+        result[key] = value
+    return result
+
+
+def validate_schema(value, rule, root, label):
+    if "$ref" in rule:
+        validate_schema(value, root["$defs"][rule["$ref"].split("/")[-1]], root, label)
+        return
+    if "oneOf" in rule:
+        matches = 0
+        for option in rule["oneOf"]:
+            try:
+                validate_schema(value, option, root, label)
+                matches += 1
+            except ValueError:
+                continue
+        require(matches == 1, f"{label}: expected a supported background type and exactly its fields")
+        return
+    kind = rule.get("type")
+    types = {"object": dict, "array": list, "string": str, "integer": int}
+    require(kind is None or type(value) is types[kind], f"{label}: expected {kind}")
+    if "const" in rule:
+        require(type(value) is type(rule["const"]) and value == rule["const"], f"{label}: invalid value")
+    if "enum" in rule:
+        require(value in rule["enum"], f"{label}: expected one of {rule['enum']}")
+    if kind == "object":
+        properties = rule["properties"]
+        require(not (set(rule["required"]) - value.keys()), f"{label}: missing required fields")
+        require(not (value.keys() - properties.keys()), f"{label}: unknown fields")
+        for key, entry in value.items():
+            validate_schema(entry, properties[key], root, f"{label}.{key}")
+    if kind == "string":
+        require(rule.get("minLength", 0) <= len(value) <= rule.get("maxLength", 1_000_000), f"{label}: invalid length")
+        if "pattern" in rule:
+            matched = re.search(rule["pattern"], value)
+            require(matched is not None and (not rule["pattern"].endswith("$") or matched.end() == len(value)),
+                    f"{label}: invalid format")
+    if kind == "integer":
+        require(rule.get("minimum", -sys.maxsize) <= value <= rule.get("maximum", sys.maxsize), f"{label}: out of range")
+    if kind == "array":
+        require(rule.get("minItems", 0) <= len(value) <= rule.get("maxItems", MAX_FILES), f"{label}: invalid item count")
+        if "items" in rule:
+            for entry in value:
+                validate_schema(entry, rule["items"], root, f"{label}[]")
+
+
+def image_size(data, suffix):
+    if suffix == ".png":
+        require(data.startswith(b"\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR") and len(data) >= 33, "Invalid PNG header")
+        return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+    require(data.startswith(b"\xff\xd8"), "Invalid JPEG header")
+    offset = 2
+    while offset < len(data) and data[offset] == 255:
+        while offset < len(data) and data[offset] == 255:
+            offset += 1
+        if offset + 2 >= len(data):
+            break
+        marker = data[offset]
+        length = int.from_bytes(data[offset + 1:offset + 3], "big")
+        if length < 2 or offset + 1 + length > len(data) or marker in (0xD9, 0xDA):
+            break
+        if marker in (0xC0, 0xC1, 0xC2) and length >= 8:
+            return int.from_bytes(data[offset + 6:offset + 8], "big"), int.from_bytes(data[offset + 4:offset + 6], "big")
+        offset += 1 + length
+    raise ValueError("Unrecognized JPEG size (expected baseline or progressive JPEG)")
+
+
+def validate(files):
+    definitions = {}
+    for name in ("manifest", "style"):
+        filename = f"{name}.json"
+        require(filename in files, f"Missing root file: {filename}")
+        require(len(files[filename]) <= 64 * 1024, f"{filename}: exceeds 64 KiB")
+        value = json.loads(files[filename].decode("utf-8"), object_pairs_hook=unique_pairs)
+        schema = json.loads((RULES / f"{name}-v1.schema.json").read_text(encoding="utf-8"))
+        validate_schema(value, schema, schema, filename)
+        definitions[name] = value
+    expected = {"manifest.json", "style.json"}
+    background = definitions["style"]["background"]
+    if background["type"] == "image":
+        asset = background["asset"]
+        require(asset in files, f"Missing image: {asset}")
+        width, height = image_size(files[asset], Path(asset).suffix)
+        require(1 <= width <= 4096 and 1 <= height <= 4096, "Image dimensions exceed 4096 × 4096")
+        expected.add(asset)
+    require(set(files) == expected, f"Undeclared files: {', '.join(sorted(set(files) - expected))}")
+    return definitions["manifest"]
+
+
+def pack(source, output):
+    require(source.is_dir(), "pack requires a source directory")
+    require(output.suffix == ".vnplugin", "Output must end in .vnplugin")
+    require(not output.resolve().is_relative_to(source.resolve()), "Output must be outside the source directory")
+    files = read_files(source)
+    manifest = validate(files)
+    with output.open("xb") as handle:
+        try:
+            with zipfile.ZipFile(handle, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                for name, data in sorted(files.items()):
+                    entry = zipfile.ZipInfo(name)
+                    entry.create_system = 3
+                    entry.external_attr = (stat.S_IFREG | 0o644) << 16
+                    archive.writestr(entry, data, compress_type=zipfile.ZIP_DEFLATED)
+            require(handle.tell() <= MAX_ARCHIVE, "Archive exceeds 10 MiB")
+        except BaseException:
+            handle.close()
+            output.unlink(missing_ok=True)
+            raise
+    return manifest
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    subcommands = parser.add_subparsers(dest="command", required=True)
+    subcommands.add_parser("validate").add_argument("path", type=Path)
+    pack_parser = subcommands.add_parser("pack")
+    pack_parser.add_argument("source", type=Path)
+    pack_parser.add_argument("output", type=Path)
+    args = parser.parse_args()
+    try:
+        manifest = validate(read_files(args.path)) if args.command == "validate" else pack(args.source, args.output)
+    except (OSError, ValueError, zipfile.BadZipFile, RuntimeError) as error:
+        print(f"Invalid: {error}", file=sys.stderr)
+        return 1
+    print(f"Valid package: {manifest['id']} {manifest['version']} (lyric-style v1; not previewed in App)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

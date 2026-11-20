@@ -1,0 +1,13 @@
+{
+  "manifestVersion": 1,
+  "id": "com.example.aurora-lyrics",
+  "name": "极光歌词",
+  "type": "lyric-style",
+  "version": "1.0.0",
+  "author": "Example Studio",
+  "license": "UNLICENSED",
+  "minAppVersion": "0.2.0",
+  "pluginAPIVersion": 1,
+  "entry": "style.json",
+  "permissions": []
+}
