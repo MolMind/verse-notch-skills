@@ -1,0 +1,13 @@
+{
+  "locale": "ja",
+  "translations": [
+    ["app-delegate.message-01", "再生"],
+    ["app-delegate.message-03", "一時停止"],
+    ["appearance-page.message-01", "外観"],
+    ["deck-view.message-04", "プラグインライブラリ"],
+    ["plugins.language.title", "言語プラグイン"],
+    ["plugins.language.builtin", "内蔵"],
+    ["plugins.language.enable", "有効にする"],
+    ["plugins.language.active", "使用中"]
+  ]
+}

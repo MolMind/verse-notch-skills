@@ -1,12 +1,13 @@
 # VerseNotch 插件技能
 
-为 VerseNotch 制作歌词样式，或设计其他类别的插件。每个技能目录包含独立的 `SKILL.md` 和运行所需的文件。
+为 VerseNotch 制作歌词样式和客户端语言插件，或设计其他类别的插件。每个技能目录包含独立的 `SKILL.md` 和运行所需的文件。
 
 [VerseNotch 官网](https://versenotch.com/) · [插件文档](https://versenotch.com/docs) · [插件广场](https://versenotch.com/plugins)
 
 | 技能 | 交付内容 | 当前阶段 |
 | --- | --- | --- |
 | [歌词样式制作](skills/versenotch-lyric-style/SKILL.md) | 静态或动态背景、字体、高亮、离线验证和 `.vnplugin` 打包 | v1 适用于 0.2.0 起的客户端，v2 需要 0.2.2 起的客户端，v3 场景歌词需要 0.2.3 起的客户端 |
+| [客户端语言制作](skills/versenotch-language/SKILL.md) | 翻译客户端界面，离线校验并打包为 `.vnplugin` | 需要 0.2.5 或更高版本 |
 | [平台登录设计](skills/versenotch-music-provider/SKILL.md) | 单平台的授权、会话和宿主适配提案 | 设计 |
 | [歌词与封面获取设计](skills/versenotch-metadata-provider/SKILL.md) | 独立的歌词或封面来源、匹配和缓存提案 | 设计 |
 | [浮窗样式设计](skills/versenotch-window-style/SKILL.md) | 宽高、材质、共振预设和预览矩阵 | 设计 |
