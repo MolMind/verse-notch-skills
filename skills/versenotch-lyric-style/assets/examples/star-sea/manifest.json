@@ -1,0 +1,13 @@
+{
+  "manifestVersion": 1,
+  "id": "com.example.star-sea",
+  "name": "星海游鱼 · 序列帧示例",
+  "type": "lyric-style",
+  "version": "1.0.0",
+  "author": "Example Studio",
+  "license": "UNLICENSED",
+  "minAppVersion": "0.2.2",
+  "pluginAPIVersion": 2,
+  "entry": "style.json",
+  "permissions": []
+}

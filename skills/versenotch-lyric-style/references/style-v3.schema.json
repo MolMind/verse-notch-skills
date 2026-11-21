@@ -1,0 +1,360 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "text",
+    "highlight",
+    "background",
+    "transition"
+  ],
+  "properties": {
+    "text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "color",
+        "fontSize",
+        "weight",
+        "alignment"
+      ],
+      "properties": {
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "fontSize": {
+          "enum": [
+            "small",
+            "medium",
+            "large"
+          ]
+        },
+        "weight": {
+          "enum": [
+            "regular",
+            "medium",
+            "semibold",
+            "bold"
+          ]
+        },
+        "alignment": {
+          "enum": [
+            "leading",
+            "center",
+            "trailing"
+          ]
+        },
+        "design": {
+          "enum": [
+            "default",
+            "rounded",
+            "serif",
+            "monospaced"
+          ]
+        },
+        "tracking": {
+          "type": "integer",
+          "minimum": -2,
+          "maximum": 8
+        },
+        "fontAsset": {
+          "type": "string",
+          "maxLength": 180,
+          "pattern": "^assets/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\\.(ttf|otf)$"
+        }
+      },
+      "not": {
+        "required": [
+          "design",
+          "fontAsset"
+        ]
+      }
+    },
+    "highlight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "color",
+        "mode"
+      ],
+      "properties": {
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "mode": {
+          "enum": [
+            "line",
+            "word"
+          ]
+        }
+      }
+    },
+    "background": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "color"
+          ],
+          "properties": {
+            "type": {
+              "const": "solid"
+            },
+            "color": {
+              "$ref": "#/$defs/color"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "colors",
+            "direction"
+          ],
+          "properties": {
+            "type": {
+              "const": "gradient"
+            },
+            "colors": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 4,
+              "items": {
+                "$ref": "#/$defs/color"
+              }
+            },
+            "direction": {
+              "enum": [
+                "horizontal",
+                "vertical",
+                "diagonal"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "asset",
+            "scaling"
+          ],
+          "properties": {
+            "type": {
+              "const": "image"
+            },
+            "asset": {
+              "type": "string",
+              "maxLength": 180,
+              "pattern": "^assets/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\\.(png|jpg|jpeg)$"
+            },
+            "scaling": {
+              "enum": [
+                "fit",
+                "fill"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "asset",
+            "direction",
+            "durationMs"
+          ],
+          "properties": {
+            "type": {
+              "const": "scroll"
+            },
+            "asset": {
+              "type": "string",
+              "maxLength": 180,
+              "pattern": "^assets/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\\.(png|jpg|jpeg)$"
+            },
+            "direction": {
+              "enum": [
+                "leftToRight",
+                "rightToLeft"
+              ]
+            },
+            "durationMs": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 120000
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "asset",
+            "scaling",
+            "columns",
+            "rows",
+            "durationMs"
+          ],
+          "properties": {
+            "type": {
+              "const": "frames"
+            },
+            "asset": {
+              "type": "string",
+              "maxLength": 180,
+              "pattern": "^assets/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\\.(png|jpg|jpeg)$"
+            },
+            "scaling": {
+              "enum": [
+                "fit",
+                "fill"
+              ]
+            },
+            "columns": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8
+            },
+            "rows": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8
+            },
+            "durationMs": {
+              "type": "integer",
+              "minimum": 68,
+              "maximum": 120000
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "asset",
+            "foreground",
+            "direction",
+            "durationMs",
+            "anchors"
+          ],
+          "properties": {
+            "type": {
+              "const": "scene"
+            },
+            "asset": {
+              "type": "string",
+              "maxLength": 180,
+              "pattern": "^assets/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\\.png$"
+            },
+            "foreground": {
+              "type": "string",
+              "maxLength": 180,
+              "pattern": "^assets/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\\.png$"
+            },
+            "direction": {
+              "enum": [
+                "leftToRight",
+                "rightToLeft"
+              ]
+            },
+            "durationMs": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 120000
+            },
+            "anchors": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 16,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 999
+                  },
+                  "y": {
+                    "type": "integer",
+                    "minimum": 250,
+                    "maximum": 750
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "transition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "effect",
+            "durationMs"
+          ],
+          "properties": {
+            "effect": {
+              "enum": [
+                "none",
+                "fade",
+                "slide"
+              ]
+            },
+            "durationMs": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 500
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "effect",
+            "durationMs",
+            "exitMs"
+          ],
+          "properties": {
+            "effect": {
+              "const": "scene"
+            },
+            "durationMs": {
+              "type": "integer",
+              "minimum": 80,
+              "maximum": 700
+            },
+            "exitMs": {
+              "type": "integer",
+              "minimum": 80,
+              "maximum": 700
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+    }
+  }
+}

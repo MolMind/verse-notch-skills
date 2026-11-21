@@ -1,4 +1,4 @@
-"""Validate and pack VerseNotch lyric-style v1 without extracting ZIP input."""
+"""Validate and pack VerseNotch lyric-style v1, v2 and v3 without extracting ZIP input."""
 
 import argparse
 import json
@@ -74,6 +74,11 @@ def validate_schema(value, rule, root, label):
         validate_schema(value, root["$defs"][rule["$ref"].split("/")[-1]], root, label)
         return
     if "oneOf" in rule:
+        if isinstance(value, dict):
+            for option in rule["oneOf"]:
+                if "type" in value and value["type"] == option.get("properties", {}).get("type", {}).get("const"):
+                    validate_schema(value, option, root, label)
+                    return
         matches = 0
         for option in rule["oneOf"]:
             try:
@@ -81,7 +86,7 @@ def validate_schema(value, rule, root, label):
                 matches += 1
             except ValueError:
                 continue
-        require(matches == 1, f"{label}: expected a supported background type and exactly its fields")
+        require(matches == 1, f"{label}: expected a supported configuration and its required fields")
         return
     kind = rule.get("type")
     types = {"object": dict, "array": list, "string": str, "integer": int}
@@ -92,6 +97,9 @@ def validate_schema(value, rule, root, label):
         require(value in rule["enum"], f"{label}: expected one of {rule['enum']}")
     if kind == "object":
         properties = rule["properties"]
+        forbidden = rule.get("not", {}).get("required", [])
+        require(not forbidden or not all(key in value for key in forbidden),
+                f"{label}: mutually exclusive fields: {', '.join(forbidden)}")
         require(not (set(rule["required"]) - value.keys()), f"{label}: missing required fields")
         require(not (value.keys() - properties.keys()), f"{label}: unknown fields")
         for key, entry in value.items():
@@ -114,6 +122,17 @@ def validate_schema(value, rule, root, label):
 def image_size(data, suffix):
     if suffix == ".png":
         require(data.startswith(b"\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR") and len(data) >= 33, "Invalid PNG header")
+        offset = 8
+        kind = None
+        while offset + 12 <= len(data):
+            length = int.from_bytes(data[offset:offset + 4], "big")
+            kind = data[offset + 4:offset + 8]
+            require(kind != b"acTL", "Use a single PNG image or a v2 sprite sheet")
+            offset += length + 12
+            require(offset <= len(data), "Truncated PNG chunk")
+            if kind == b"IEND":
+                break
+        require(kind == b"IEND", "Missing PNG end chunk")
         return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
     require(data.startswith(b"\xff\xd8"), "Invalid JPEG header")
     offset = 2
@@ -132,34 +151,77 @@ def image_size(data, suffix):
     raise ValueError("Unrecognized JPEG size (expected baseline or progressive JPEG)")
 
 
-def validate(files):
-    definitions = {}
-    for name in ("manifest", "style"):
-        filename = f"{name}.json"
-        require(filename in files, f"Missing root file: {filename}")
-        require(len(files[filename]) <= 64 * 1024, f"{filename}: exceeds 64 KiB")
-        value = json.loads(files[filename].decode("utf-8"), object_pairs_hook=unique_pairs)
-        schema = json.loads((RULES / f"{name}-v1.schema.json").read_text(encoding="utf-8"))
-        validate_schema(value, schema, schema, filename)
-        definitions[name] = value
+def json_entry(files, name):
+    require(name in files, f"Missing root file: {name}")
+    require(len(files[name]) <= 64 * 1024, f"{name}: exceeds 64 KiB")
+    return json.loads(files[name].decode("utf-8"), object_pairs_hook=unique_pairs)
+
+
+def version_tuple(value):
+    require(re.fullmatch(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", value),
+            "Expected an app version such as 0.2.2")
+    return tuple(map(int, value.split(".")))
+
+
+def validate(files, host_version=None):
+    manifest = json_entry(files, "manifest.json")
+    require(isinstance(manifest, dict), "manifest.json: expected object")
+    api = manifest.get("pluginAPIVersion")
+    require(type(api) is int and api in (1, 2, 3), "Expected lyric-style plugin API 1, 2 or 3")
+    style = json_entry(files, "style.json")
+    for name, value in (("manifest", manifest), ("style", style)):
+        schema = json.loads((RULES / f"{name}-v{api}.schema.json").read_text(encoding="utf-8"))
+        validate_schema(value, schema, schema, f"{name}.json")
+    minimum = version_tuple(manifest["minAppVersion"])
+    require(api == 1 or minimum >= (0, 2, api), f"lyric-style v{api} requires minAppVersion >= 0.2.{api}")
+    if host_version is not None:
+        require(version_tuple(host_version) >= minimum,
+                f"Target VerseNotch {host_version} is older than required {manifest['minAppVersion']}")
     expected = {"manifest.json", "style.json"}
-    background = definitions["style"]["background"]
-    if background["type"] == "image":
+    background = style["background"]
+    kind = background["type"]
+    require((kind == "scene") == (style["transition"]["effect"] == "scene"),
+            "Scene background and scene transition must be used together")
+    if kind in ("image", "scroll", "frames", "scene"):
         asset = background["asset"]
         require(asset in files, f"Missing image: {asset}")
         width, height = image_size(files[asset], Path(asset).suffix)
         require(1 <= width <= 4096 and 1 <= height <= 4096, "Image dimensions exceed 4096 × 4096")
+        if kind in ("scroll", "scene"):
+            require(width >= height, "Loop image must be at least as wide as it is tall")
+        if kind == "scene":
+            positions = [anchor["x"] for anchor in background["anchors"]]
+            require(len(positions) == len(set(positions)), "Scene anchors need distinct x positions")
+            foreground = background["foreground"]
+            require(foreground != asset and foreground in files, f"Missing distinct foreground image: {foreground}")
+            require(image_size(files[foreground], ".png") == (width, height), "Scene layers need identical dimensions")
+            require(files[foreground][25] in (4, 6), "Scene foreground needs a PNG alpha channel")
+            expected.add(foreground)
+        if kind == "frames":
+            columns, rows = background["columns"], background["rows"]
+            count = columns * rows
+            require(count >= 2 and width % columns == 0 and height % rows == 0,
+                    "Sprite sheet needs at least 2 frames with equally sized integer cells")
+            require(background["durationMs"] >= count * 34, "Sprite sheet needs at least 34 ms per frame")
         expected.add(asset)
+    font_asset = style["text"].get("fontAsset")
+    if font_asset:
+        require(font_asset in files, f"Missing font: {font_asset}")
+        font = files[font_asset]
+        signature = b"OTTO" if font_asset.endswith(".otf") else bytes((0, 1, 0, 0))
+        require(12 <= len(font) <= 8 * 1024 * 1024 and font.startswith(signature),
+                "Expected a matching single TTF/OTF font up to 8 MiB")
+        expected.add(font_asset)
     require(set(files) == expected, f"Undeclared files: {', '.join(sorted(set(files) - expected))}")
-    return definitions["manifest"]
+    return manifest
 
 
-def pack(source, output):
+def pack(source, output, host_version=None):
     require(source.is_dir(), "pack requires a source directory")
     require(output.suffix == ".vnplugin", "Output must end in .vnplugin")
     require(not output.resolve().is_relative_to(source.resolve()), "Output must be outside the source directory")
     files = read_files(source)
-    manifest = validate(files)
+    manifest = validate(files, host_version)
     with output.open("xb") as handle:
         try:
             with zipfile.ZipFile(handle, "w", compression=zipfile.ZIP_DEFLATED) as archive:
@@ -179,17 +241,20 @@ def pack(source, output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     subcommands = parser.add_subparsers(dest="command", required=True)
-    subcommands.add_parser("validate").add_argument("path", type=Path)
+    validate_parser = subcommands.add_parser("validate")
+    validate_parser.add_argument("path", type=Path)
+    validate_parser.add_argument("--host-version")
     pack_parser = subcommands.add_parser("pack")
     pack_parser.add_argument("source", type=Path)
     pack_parser.add_argument("output", type=Path)
+    pack_parser.add_argument("--host-version")
     args = parser.parse_args()
     try:
-        manifest = validate(read_files(args.path)) if args.command == "validate" else pack(args.source, args.output)
+        manifest = validate(read_files(args.path), args.host_version) if args.command == "validate" else pack(args.source, args.output, args.host_version)
     except (OSError, ValueError, zipfile.BadZipFile, RuntimeError) as error:
         print(f"Invalid: {error}", file=sys.stderr)
         return 1
-    print(f"Valid package: {manifest['id']} {manifest['version']} (lyric-style v1; not previewed in App)")
+    print(f"Valid package: {manifest['id']} {manifest['version']} (lyric-style v{manifest['pluginAPIVersion']}; not previewed in App)")
     return 0
 
 

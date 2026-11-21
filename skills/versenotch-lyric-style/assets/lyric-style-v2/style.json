@@ -1,0 +1,27 @@
+{
+  "text": {
+    "color": "#EDF5FF",
+    "fontSize": "medium",
+    "weight": "semibold",
+    "alignment": "center",
+    "design": "rounded",
+    "tracking": 1
+  },
+  "highlight": {
+    "color": "#9CFFDF",
+    "mode": "word"
+  },
+  "background": {
+    "type": "gradient",
+    "colors": [
+      "#111C38",
+      "#243657",
+      "#17685E"
+    ],
+    "direction": "vertical"
+  },
+  "transition": {
+    "effect": "fade",
+    "durationMs": 160
+  }
+}

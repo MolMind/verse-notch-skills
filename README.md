@@ -6,7 +6,7 @@
 
 | 技能 | 交付内容 | 当前阶段 |
 | --- | --- | --- |
-| [歌词样式制作](skills/versenotch-lyric-style/SKILL.md) | 声明式样式配置、离线验证和 `.vnplugin` 打包 | 契约 `lyric-style` v1，VerseNotch 0.2.0 起支持本地导入 |
+| [歌词样式制作](skills/versenotch-lyric-style/SKILL.md) | 静态或动态背景、字体、高亮、离线验证和 `.vnplugin` 打包 | v1 适用于 0.2.0 起的客户端，v2 需要 0.2.2 起的客户端，v3 场景歌词需要 0.2.3 起的客户端 |
 | [平台登录设计](skills/versenotch-music-provider/SKILL.md) | 单平台的授权、会话和宿主适配提案 | 设计 |
 | [歌词与封面获取设计](skills/versenotch-metadata-provider/SKILL.md) | 独立的歌词或封面来源、匹配和缓存提案 | 设计 |
 | [浮窗样式设计](skills/versenotch-window-style/SKILL.md) | 宽高、材质、共振预设和预览矩阵 | 设计 |
@@ -23,22 +23,24 @@
 
 ## 歌词样式快速开始
 
-将 [`lyric-style-v1.0.0`](https://github.com/MolMind/verse-notch-skills/tree/lyric-style-v1.0.0/skills/versenotch-lyric-style) 中的整个 `skills/versenotch-lyric-style` 目录复制到所用 Agent 的技能目录。在支持项目技能的工作区，也可以将它放在 `.agents/skills/` 下。目录内的模板、校验器与规范应一起保留。
+将本项目的整个 [`skills/versenotch-lyric-style`](skills/versenotch-lyric-style/) 目录复制到所用 Agent 的技能目录。固定使用旧版时可取 [`lyric-style-v1.0.0`](https://github.com/MolMind/verse-notch-skills/tree/lyric-style-v1.0.0/skills/versenotch-lyric-style)。在支持项目技能的工作区，也可以将它放在 `.agents/skills/` 下。目录内的模板、校验器与规范应一起保留。
 
 在 Agent 中调用：
 
-> $versenotch-lyric-style 帮我做一个深蓝渐变、薄荷绿逐字高亮的歌词样式，校验并打包。
+> $versenotch-lyric-style 给支持 v2 的 VerseNotch 做一个从左到右循环的纸面长卷，用深墨色衬线字体和逐字高亮，校验并打包。
+
+需要做动态背景时，可参考可导入的[星海游鱼和纸上行旅示例](skills/versenotch-lyric-style/references/examples.md)。
 
 也可以用 Python 3.10 或以上版本直接运行校验打包。以下命令在本仓库根目录执行，将示例包保存到临时目录。
 
 ```sh
 demo_dir=$(mktemp -d)
 skill_dir=skills/versenotch-lyric-style
-python3 "$skill_dir/scripts/vnplugin.py" pack "$skill_dir/assets/lyric-style" "$demo_dir/aurora.vnplugin"
-python3 "$skill_dir/scripts/vnplugin.py" validate "$demo_dir/aurora.vnplugin"
+python3 "$skill_dir/scripts/vnplugin.py" pack "$skill_dir/assets/examples/paper-journey" "$demo_dir/paper-journey.vnplugin" --host-version 0.2.2
+python3 "$skill_dir/scripts/vnplugin.py" validate "$demo_dir/paper-journey.vnplugin" --host-version 0.2.2
 ```
 
-打开兼容的 VerseNotch，在「插件库 → 从文件导入」选择生成的包，预览后应用。发布自己的样式时，按 [歌词样式文档](https://versenotch.com/docs/plugins/lyric-style) 检查兼容性和投稿要求。
+打开兼容的 VerseNotch，在「插件库 → 从文件导入」选择生成的包，预览后应用。v2 和 v3 样式支持本地导入。投稿 v1 样式时，按 [歌词样式文档](https://versenotch.com/docs/plugins/lyric-style) 检查兼容性和投稿要求。
 
 ## 生成测试市场安装包
 

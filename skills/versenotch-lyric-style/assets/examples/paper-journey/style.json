@@ -1,0 +1,24 @@
+{
+  "text": {
+    "color": "#544035",
+    "fontSize": "medium",
+    "weight": "semibold",
+    "alignment": "center",
+    "design": "serif",
+    "tracking": 1
+  },
+  "highlight": {
+    "color": "#7D352A",
+    "mode": "word"
+  },
+  "background": {
+    "type": "scroll",
+    "asset": "assets/paper-journey.png",
+    "direction": "leftToRight",
+    "durationMs": 24000
+  },
+  "transition": {
+    "effect": "slide",
+    "durationMs": 210
+  }
+}

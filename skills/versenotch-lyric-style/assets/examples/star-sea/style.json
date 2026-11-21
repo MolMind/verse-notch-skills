@@ -1,0 +1,25 @@
+{
+  "text": {
+    "color": "#DDDBF7",
+    "fontSize": "medium",
+    "weight": "semibold",
+    "alignment": "center",
+    "design": "rounded"
+  },
+  "highlight": {
+    "color": "#9DF1EE",
+    "mode": "word"
+  },
+  "background": {
+    "type": "frames",
+    "asset": "assets/star-sea.png",
+    "scaling": "fill",
+    "columns": 8,
+    "rows": 4,
+    "durationMs": 4000
+  },
+  "transition": {
+    "effect": "fade",
+    "durationMs": 160
+  }
+}
