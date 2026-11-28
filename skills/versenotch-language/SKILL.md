@@ -6,7 +6,7 @@ description: 制作、校验和打包 VerseNotch macOS 客户端的界面语言�
 # 制作 VerseNotch 语言插件
 
 1. 复制 [日语示例](assets/ja/) 到新的工作目录。使用自己的反向域名 ID，在 `name` 填写目标语言的自称。更新已有插件时沿用 ID 并提高版本号。
-2. 按 [v1 包规范](references/language-v1.md) 修改 `strings.json`。从 [0.2.5 文案目录](references/strings-0.2.5.json) 选择键，保留原文中每个数字占位符。可按目标语言调整占位符顺序。优先翻译导航、插件操作、播放器控制与提示。
+2. 按 [v1 包规范](references/language-v1.md) 修改 `strings.json`。按包的 minAppVersion 从 [0.3.0 文案目录](references/strings-0.3.0.json) 或 [0.2.5 文案目录](references/strings-0.2.5.json) 选择键，保留原文中每个数字占位符。可按目标语言调整占位符顺序。优先翻译导航、插件操作、播放器控制与提示。
 3. 运行随附脚本。命令接受插件目录或已打包的文件，并报告覆盖率。
 
    ```sh

@@ -126,11 +126,14 @@ def main():
     packaging.add_argument("destination", type=Path)
     options = parser.parse_args()
     try:
-        catalog_path = Path(__file__).resolve().parents[1] / "references" / "strings-0.2.5.json"
-        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
         if options.command == "pack":
             require(options.source.is_dir(), "Pack a source directory")
         files = read_files(options.source)
+        manifest = json.loads(files["manifest.json"].decode("utf-8"), object_pairs_hook=unique_object)
+        require(isinstance(manifest, dict), "Invalid manifest")
+        revision = "0.3.0" if version(manifest.get("minAppVersion", "")) >= (0, 3, 0) else "0.2.5"
+        catalog_path = Path(__file__).resolve().parents[1] / "references" / f"strings-{revision}.json"
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
         locale, translated = validate(files, catalog)
         if options.command == "pack":
             pack(files, options.destination)

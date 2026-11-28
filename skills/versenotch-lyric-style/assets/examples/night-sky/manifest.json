@@ -1,0 +1,13 @@
+{
+  "manifestVersion": 1,
+  "id": "app.versenotch.night-sky",
+  "name": "夜空",
+  "type": "lyric-style",
+  "version": "1.0.0",
+  "author": "Example Studio",
+  "license": "UNLICENSED",
+  "minAppVersion": "0.3.0",
+  "pluginAPIVersion": 4,
+  "entry": "style.json",
+  "permissions": []
+}

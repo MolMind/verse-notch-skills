@@ -1,4 +1,4 @@
-"""Validate and pack VerseNotch lyric-style v1, v2 and v3 without extracting ZIP input."""
+"""Validate and pack VerseNotch lyric-style v1 through v4 without extracting ZIP input."""
 
 import argparse
 import json
@@ -167,17 +167,91 @@ def validate(files, host_version=None):
     manifest = json_entry(files, "manifest.json")
     require(isinstance(manifest, dict), "manifest.json: expected object")
     api = manifest.get("pluginAPIVersion")
-    require(type(api) is int and api in (1, 2, 3), "Expected lyric-style plugin API 1, 2 or 3")
+    require(type(api) is int and api in (1, 2, 3, 4), "Expected lyric-style plugin API 1 through 4")
     style = json_entry(files, "style.json")
     for name, value in (("manifest", manifest), ("style", style)):
-        schema = json.loads((RULES / f"{name}-v{api}.schema.json").read_text(encoding="utf-8"))
+        schema_version = 3 if name == "style" and api == 4 else api
+        schema = json.loads((RULES / f"{name}-v{schema_version}.schema.json").read_text(encoding="utf-8"))
         validate_schema(value, schema, schema, f"{name}.json")
+    for key, limit in (("name", 80), ("author", 100), ("license", 100)):
+        text = manifest[key]
+        require(text == text.strip() and len(text.encode("utf-8")) <= limit,
+                f"manifest.json: {key} must be trimmed and fit within {limit} UTF-8 bytes")
     minimum = version_tuple(manifest["minAppVersion"])
-    require(api == 1 or minimum >= (0, 2, api), f"lyric-style v{api} requires minAppVersion >= 0.2.{api}")
+    floor = (0, 3, 0) if api == 4 else (0, 2, api)
+    require(api == 1 or minimum >= floor, f"minAppVersion below API {api} floor")
     if host_version is not None:
         require(version_tuple(host_version) >= minimum,
                 f"Target VerseNotch {host_version} is older than required {manifest['minAppVersion']}")
     expected = {"manifest.json", "style.json"}
+    if api == 4:
+        if "assets/cover.png" in files:
+            cover = files["assets/cover.png"]
+            width, height = image_size(cover, ".png")
+            require(len(cover) <= 1024 * 1024 and 0 < width <= 1024 and 0 < height <= 1024, "Invalid catalog cover")
+            expected.add("assets/cover.png")
+        theme = json_entry(files, "theme.json")
+        schema = json.loads((RULES / "theme-v4.schema.json").read_text(encoding="utf-8"))
+        validate_schema(theme, schema, schema, "theme.json")
+        require(theme["scatter"] != "glyph" or theme.get("glyphMotion") == "ripple", "glyph scatter requires ripple motion")
+        if theme.get("lineLayout") == "double":
+            require("stage.json" not in files and theme.get("glyphMotion") in (None, "glow", "lift", "reveal", "wipe"),
+                    "double layout requires the standard text canvas and a compatible glyph motion")
+        if composition := theme.get("composition"):
+            require(theme.get("windowCoverage") == "full" and "stage.json" not in files and
+                    "lineLayout" not in theme and "glyphMotion" not in theme,
+                    "composition requires full coverage and owns the cue layout")
+            required_art = {
+                "portrait-chat": (("assets/portraits.png", 3, 4),),
+                "conversation": (("assets/portraits.png", 3, 4),),
+                "rain-footsteps": (("assets/paper.png", 1, 1), ("assets/footsteps.png", 6, 4)),
+                "paper-journey": (("assets/back.jpg", 4, 6), ("assets/steps.jpg", 4, 9)),
+                "fog-glass": (("assets/amber-lights.jpg", 1, 1), ("assets/condensation.jpg", 1, 1), ("assets/elevated-night.jpg", 1, 1)),
+            }
+            for name, columns, rows in required_art.get(composition, ()):
+                require(name in files, f"Missing composition artwork: {name}")
+                width, height = image_size(files[name], Path(name).suffix)
+                require(columns <= width <= 4096 and rows <= height <= 4096 and width * height <= 4_000_000,
+                        f"Invalid composition artwork: {name}")
+                expected.add(name)
+            if composition == "fog-glass":
+                import base64
+                import binascii
+                name = "assets/finger-strokes.json"
+                data = files.get(name, b"")
+                require(0 < len(data) <= 6 * 1024 * 1024, "Invalid handwriting table")
+                table = json.loads(data.decode("utf-8"), object_pairs_hook=unique_pairs)
+                require(isinstance(table, dict) and 1 <= len(table) <= 40_000, "Invalid handwriting table")
+                try:
+                    require(all(isinstance(value, str) and 1 <= len(base64.b64decode(value, validate=True)) <= 2048
+                                for value in table.values()), "Invalid handwriting entries")
+                except (ValueError, binascii.Error):
+                    require(False, "Invalid handwriting entries")
+                expected.add(name)
+                for filename in ("notice.txt", "copying.txt", "arphicpl.txt"):
+                    name = "assets/" + filename
+                    require(1 <= len(files.get(name, b"")) <= 65_536, f"Missing or invalid notice: {name}")
+                    expected.add(name)
+        expected.add("theme.json")
+        if "stage.json" in files:
+            stage = json_entry(files, "stage.json")
+            schema = json.loads((RULES / "stage-v4.schema.json").read_text(encoding="utf-8"))
+            validate_schema(stage, schema, schema, "stage.json")
+            frames = [stage["desktopFrame"], *(caption["frame"] for caption in stage["captions"])]
+            for frame in frames:
+                require(frame["x"] + frame["width"] <= 1000 and frame["y"] + frame["height"] <= 1000,
+                        "stage.json: frame exceeds canvas")
+            total_pixels = 0
+            for shot in stage["gapShots"]:
+                path = shot["asset"]
+                require(path in files, f"Missing stage asset: {path}")
+                width, height = image_size(files[path], Path(path).suffix)
+                total_pixels += width * height
+                require(0 < width <= 4096 and 0 < height <= 4096 and total_pixels <= 16000000 and
+                        width % shot["columns"] == 0 and height % shot["rows"] == 0,
+                        "stage.json: invalid sheet dimensions or pixel budget")
+                expected.add(path)
+            expected.add("stage.json")
     background = style["background"]
     kind = background["type"]
     require((kind == "scene") == (style["transition"]["effect"] == "scene"),

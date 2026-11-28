@@ -1,0 +1,82 @@
+{
+  "type": "object",
+  "required": [
+    "desktop",
+    "effect",
+    "scatter"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "desktop": {
+      "type": "string",
+      "enum": [
+        "none",
+        "center",
+        "leading"
+      ]
+    },
+    "effect": {
+      "type": "string",
+      "enum": [
+        "none",
+        "stars",
+        "starfield",
+        "snowfall"
+      ]
+    },
+    "scatter": {
+      "type": "string",
+      "enum": [
+        "none",
+        "line",
+        "glyph"
+      ]
+    },
+    "glyphMotion": {
+      "type": "string",
+      "enum": [
+        "glow",
+        "lift",
+        "reveal",
+        "wipe",
+        "stagger",
+        "underline",
+        "gather",
+        "drift",
+        "columns",
+        "fall",
+        "ripple"
+      ]
+    },
+    "lineLayout": {
+      "type": "string",
+      "enum": [
+        "single",
+        "double"
+      ]
+    },
+    "windowCoverage": {
+      "type": "string",
+      "enum": [
+        "lyrics",
+        "full"
+      ]
+    },
+    "composition": {
+      "type": "string",
+      "enum": [
+        "portrait-chat",
+        "conversation",
+        "receding-tiles",
+        "cutout",
+        "rain-footsteps",
+        "star-fish",
+        "gathering-ink",
+        "drifting-ink",
+        "lyric-camera",
+        "paper-journey",
+        "fog-glass"
+      ]
+    }
+  }
+}

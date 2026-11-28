@@ -6,13 +6,17 @@
 
 | 技能 | 交付内容 | 当前阶段 |
 | --- | --- | --- |
-| [歌词样式制作](skills/versenotch-lyric-style/SKILL.md) | 静态或动态背景、字体、高亮、离线验证和 `.vnplugin` 打包 | v1 适用于 0.2.0 起的客户端，v2 需要 0.2.2 起的客户端，v3 场景歌词需要 0.2.3 起的客户端 |
-| [客户端语言制作](skills/versenotch-language/SKILL.md) | 翻译客户端界面，离线校验并打包为 `.vnplugin` | 需要 0.2.5 或更高版本 |
+| [歌词样式制作](skills/versenotch-lyric-style/SKILL.md) | 静态或动态背景、字体、高亮、离线验证和 `.vnplugin` 打包 | v1 适用于 0.2.0 起的客户端，v2 需要 0.2.2 起的客户端，v3 场景歌词需要 0.2.3；v4 舞台、相邻句、字形动效、桌面粒子与整句散布可用于 0.3.0 开发宿主 |
+| [客户端语言制作](skills/versenotch-language/SKILL.md) | 翻译客户端界面，离线校验并打包为 `.vnplugin` | 最低 0.2.5。按 minAppVersion 选择 0.2.5 或 0.3.0 文案目录 |
 | [平台登录设计](skills/versenotch-music-provider/SKILL.md) | 单平台的授权、会话和宿主适配提案 | 设计 |
 | [歌词与封面获取设计](skills/versenotch-metadata-provider/SKILL.md) | 独立的歌词或封面来源、匹配和缓存提案 | 设计 |
-| [浮窗样式设计](skills/versenotch-window-style/SKILL.md) | 宽高、材质、共振预设和预览矩阵 | 设计 |
+| [浮窗样式设计](skills/versenotch-window-style/SKILL.md) | 材质、前奏、共振分别校验和打包 | 三类独立插件可在 0.3.0 开发宿主启用，window-style 组合预设仍在设计中 |
 | [播放顺序设计](skills/versenotch-playback-order/SKILL.md) | 排序规则、回退和可复现队列样例 | 设计 |
 | [音质调节设计](skills/versenotch-audio-preset/SKILL.md) | 音频信号链、参数和试听验收计划 | 设计 |
+
+## 0.3.0 联合升级
+
+公开技能随客户端 0.3.0 同期交付。上表记录目前能使用的能力。完整主题的作者规则已进入[主题制作与实窗验收指引](skills/versenotch-lyric-style/references/themes-0.3.0.md)。各类型在客户端执行、上传校验与安装校验通过同一套契约样例后更新交付状态。
 
 ## 使用设计技能
 

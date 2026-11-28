@@ -1,0 +1,20 @@
+{
+  "text": {
+    "color": "#DAE8FF",
+    "alignment": "center",
+    "weight": "medium",
+    "fontSize": "large"
+  },
+  "highlight": {
+    "color": "#FFDC94",
+    "mode": "word"
+  },
+  "background": {
+    "type": "solid",
+    "color": "#111A30"
+  },
+  "transition": {
+    "effect": "fade",
+    "durationMs": 160
+  }
+}

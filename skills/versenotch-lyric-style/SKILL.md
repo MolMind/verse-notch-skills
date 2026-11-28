@@ -7,10 +7,13 @@ description: 为 VerseNotch 设计、制作、校验与打包可导入的歌词�
 
 先从需求明确客户端里应出现的效果。记录目标客户端版本、歌词所在窗口、背景怎样运动，以及字体与高亮的表现。用户指定了人物或视觉参考时，先确定要保留的角色造型、神态、构图与配色，再选择素材。下面的模板只提供字段结构。
 
+面向 0.3.0 设计或迁移歌词样式时，先按[灵动、全息与可选效果制作规则](references/themes-0.3.0.md)建立画布与验收清单，然后按目标客户端已实现的契约打包。
+
 ## 选择客户端支持的能力
 
-先读[浮窗适配与顶部播放栏](references/viewport-and-header.md)。现有 `.vnplugin` 在展开浮窗的歌词区内绘制。画面延伸到顶部播放栏时，按客户端内置主题或宿主接口开发处理。
+先读[浮窗适配与顶部播放栏](references/viewport-and-header.md)。0.3.0 浮窗固定展开。v4 插件推荐使用 `windowCoverage: "full"`，让背景与装饰覆盖顶部两翼和歌词区域。顶部播放信息和交互控件由宿主绘制。歌词包自行决定单行或双行。
 
+- 0.3.0 开发宿主可用 [v4 夜空示例](assets/examples/night-sky/)。沿用 v3 的 style.json，另加 theme.json 描述桌面构图、可关闭的星点效果与可复现的整句散布。制作时使用 --host-version 0.3.0，运行开发宿主的 --validate-lyric-plugin 验证安装与重启恢复。
 - [v3 场景歌词](references/lyric-style-v3.md)用于含 v3 渲染器的 VerseNotch 0.2.3 起的客户端，支持连续场景、前景遮挡、随景锚点及歌词进出场。
 - [v2 契约](references/lyric-style-v2.md)用于含 v2 渲染器的 VerseNotch 0.2.2 起的客户端。支持可平铺图片滚动、序列帧循环、系统字形、随包字体和字距。从 [v2 模板](assets/lyric-style-v2/) 或 [星海游鱼与纸上行旅示例](references/examples.md)开始。
 - [v1 契约](references/lyric-style-v1.md)用于 VerseNotch 0.2.0 起的客户端。它支持颜色、字号、字重、对齐、逐行或逐字高亮、静态背景与歌词转场。使用 [v1 模板](assets/lyric-style/)。
